@@ -38,7 +38,7 @@ def generate_traffic():
             df_ = df_.groupby('QT_INTERVAL_COUNT',as_index=False)['QT_VOLUME_24HOUR'].median()
             df = df.append(df_, ignore_index = True)
 
-    df = df.sort_values(by = 'QT_INTERVAL_COUNT')
+    df = df.sort_values(by = 'QT_INTERVAL_COUNT', ignore_index = True)
     df.to_csv(os.path.join(TRAFFIC_DATA_DIR,'traffic_volume.csv'))
 
 def load_traffic():
@@ -52,18 +52,18 @@ def load_traffic():
 
 def generate_pedestrian():
     url = 'https://data.melbourne.vic.gov.au/resource/b2ak-trbp.json?$where=year%3E2018'
-    sensor_ids_pt = [
-                    5,  # Princes Bridge
-                    6,  # Flinders Street Station Underpass
-                    13, # Flagstaff Station
-                    22, # Flinders St-Elizabeth St (East)
-                    24, # Spencer St-Collins St (North)
-                    40, # Lonsdale St-Spring St (West)
-                    57, # Bourke St Bridge
-                    58, # Bourke St - Spencer St (North)
-                    62, # La Trobe St (North)
-    ]
-    url = url + '%20AND%20(sensor_id=' + '%20OR%20sensor_id='.join([str(id) for id in sensor_ids_pt]) + ')'
+    #sensor_ids_pt = [
+    #                5,  # Princes Bridge
+    #                6,  # Flinders Street Station Underpass
+    #                13, # Flagstaff Station
+    #                22, # Flinders St-Elizabeth St (East)
+    #                24, # Spencer St-Collins St (North)
+    #                40, # Lonsdale St-Spring St (West)
+    #                57, # Bourke St Bridge
+    #                58, # Bourke St - Spencer St (North)
+    #                62, # La Trobe St (North)
+    #]
+    #url = url + '%20AND%20(sensor_id=' + '%20OR%20sensor_id='.join([str(id) for id in sensor_ids_pt]) + ')'
 
     params = {'$limit' : 10000000}
     response = requests.get(url, params)
