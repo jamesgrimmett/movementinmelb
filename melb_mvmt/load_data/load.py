@@ -50,6 +50,37 @@ def load_traffic():
 
     return df
 
+def update_traffic(new_data_dir):
+    """
+    """
+    df = load_traffic()
+    files = glob.glob(os.path.join(new_data_dir,'*.csv'))
+    max_date = df.QT_INTERVAL_COUNT.max()
+    for i,f in enumerate(files):
+        print(f'Processed {i+1} / {len(files)}')
+        df_ = pd.read_csv(f)
+        if df_.empty:
+            print(f'Empty file {str(f).split("/")[-1]}')
+            continue 
+        # Keep only the counts from Melbourne City
+        df_ = df_[df_.NM_REGION.isin(['MC1','MC2','MC3'])]
+        df_['QT_INTERVAL_COUNT'] = pd.to_datetime(df_.QT_INTERVAL_COUNT)
+        if df_.QT_INTERVAL_COUNT.unique() <= max_date:
+            continue
+        # Store the mean count
+        df_ = df_[df_.QT_VOLUME_24HOUR >= 0]
+        if len(df_) > 0:
+            # Find the total 24 hour volume through each site
+            df_ = df_.groupby(['QT_INTERVAL_COUNT','NB_SCATS_SITE'],as_index = False)[['QT_VOLUME_24HOUR']].sum()
+            # Find the median 24 hour volume of all sites
+            df_ = df_.groupby('QT_INTERVAL_COUNT',as_index=False)['QT_VOLUME_24HOUR'].median()
+            df = df.append(df_, ignore_index = True)
+
+    df = df.sort_values(by = 'QT_INTERVAL_COUNT', ignore_index = True)
+    df.to_csv(os.path.join(TRAFFIC_DATA_DIR,'traffic_volume.csv'))
+        
+
+
 def generate_pedestrian():
     url = 'https://data.melbourne.vic.gov.au/resource/b2ak-trbp.json?$where=year%3E2018'
     #sensor_ids_pt = [
@@ -65,7 +96,7 @@ def generate_pedestrian():
     #]
     #url = url + '%20AND%20(sensor_id=' + '%20OR%20sensor_id='.join([str(id) for id in sensor_ids_pt]) + ')'
 
-    params = {'$limit' : 10000000}
+    params = {'$limit' : 100000000}
     response = requests.get(url, params)
 
     if not response.ok:
@@ -77,6 +108,27 @@ def generate_pedestrian():
     df['year'] = df.year.astype(int)
     df['hourly_counts'] = df.hourly_counts.astype(int)
     df['week'] = df.date_time.dt.isocalendar().week
+
+    month_str = {'January'  : 1,
+                'February'  : 2,
+                'March'     : 3,
+                'April'     : 4,
+                'May'       : 5,
+                'June'      : 6,
+                'July'      : 7,
+                'August'    : 8,
+                'September' : 9,
+                'October'   : 10,
+                'November'  : 11,
+                'December'  : 12}
+    df['month'] = df.month.map(month_str)
+    df['date_time'] = df.date_time.dt.date
+    keep_cols = ['year','month','mdate','day','sensor_id','week','date_time']#,'weekday']
+    # Find the median of the counts per day for each sensor/date
+    df = df.groupby(keep_cols, as_index = False).hourly_counts.median()
+    # Find the median across sensors
+    keep_cols.remove('sensor_id')
+    df = df.groupby(keep_cols, as_index = False).hourly_counts.median()
 
     df.to_csv(os.path.join(PEDESTRIAN_DATA_DIR,'pedestrian_volume.csv'))
 

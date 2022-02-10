@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import plotify # https://github.com/jamesgrimmett/plotify
 
 from ..load_data import load
 from . import process_pedestrian
@@ -23,18 +24,39 @@ class Plot(object):
         df_wk_trf = self.df_wk_trf
 
         fig, ax = plt.subplots(ncols = 1, nrows = 1)
-        ax.plot(df_wk_ped[df_wk_ped.weekday == True].change, color = 'red', label = 'weekday')
-        ax.plot(df_wk_ped[df_wk_ped.weekday == False].change, color = 'red', ls = 'dashed', label = 'weekend')
-        ax.plot(df_wk_trf[df_wk_trf.WEEKDAY == True].CHANGE, color = 'blue', label = 'weekday')
-        ax.plot(df_wk_trf[df_wk_trf.WEEKDAY == False].CHANGE, color = 'blue', ls = 'dashed', label = 'weekend')
+        clrs = plotify.colours()
+        ax.plot(df_wk_ped.date_time, df_wk_ped.change, color = clrs[0], label = 'pedestrian')
+        ax.plot(df_wk_trf.DATE_TIME, df_wk_trf.CHANGE, color = clrs[1], label = 'vehicle')
         ax.legend()
 
-    def plot_comparison_rollingavg(self, buffer = 14):
+        fig.suptitle('% change relative to same week in 2019', 
+                        y = 0.95,
+                        size = 12)
+        plotify.hide_spines([ax])
+
+    def plot_wkdayvswkend(self, data_type = 'pedestrian'):
+        if data_type == 'pedestrian':
+            df_wk = self.df_wk_ped
+        elif data_type == 'vehicle':
+            df_wk = self.df_wk_trf
+
+        fig, ax = plt.subplots(ncols = 1, nrows = 1)
+        clrs = plotify.colours()
+        ax.plot(df_wk[df_wk.weekday == True].change, color = clrs[0], label = 'weekday')
+        ax.plot(df_wk[df_wk.weekday == False].change, color = clrs[1], label = 'weekend')
+        ax.legend()
+
+        fig.suptitle('% change relative to same week in 2019', 
+                        y = 0.95,
+                        size = 12)
+        plotify.hide_spines([ax])
+
+    def plot_comparison_rollingavg(self, buffer = 7):
         df_ped = self.df_ped
         df_trf = self.df_trf
-        df_ped_avg = process_pedestrian.get_rolling_average(df_ped, buffer = buffer)
-        df_trf_avg = process_traffic.get_rolling_average(df_trf, buffer = buffer)
+        df_ped_avg = process_pedestrian.get_rolling_average_change(df_ped, buffer = buffer)
+        df_trf_avg = process_traffic.get_rolling_average_change(df_trf, buffer = buffer)
 
         fig, ax = plt.subplots()
-        ax.plot(df_trf_avg.CHANGE, label = 'traffic')
         ax.plot(df_ped_avg.change, label = 'pedestrians')
+        ax.plot(df_trf_avg.CHANGE, label = 'traffic')
